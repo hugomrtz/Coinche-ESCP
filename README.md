@@ -33,7 +33,7 @@ Ce projet est une application web moderne (React + Vite) permettant de jouer con
    Ouvrez ensuite `http://localhost:5173`.
 
 ## 🎮 Règles du Jeu (ESCP)
-- **Enchères** : Minimum 82. 
+- **Enchères** : Minimum 80 (mais valider 82 points pour marquer le contrat). 
 - **Coinche** : Multiplie les points par 2 (Surcoinche x4).
 - **Contrat** : Pour gagner une manche, l'équipe preneuse doit atteindre son contrat. En cas de chute, l'adversaire marque 160 points + bonus.
 - **Belote** : Explicitée visuellement lors du jeu.
@@ -41,4 +41,4 @@ Ce projet est une application web moderne (React + Vite) permettant de jouer con
 ## 🧠 Système de Feedback
 À la fin de chaque manche, vous pouvez noter la performance de votre partenaire bot (P2). Ces données sont stockées dans le fichier de training exportable.
 
-Bonne Gigue ! 🏁
+Bonne Gigue !
