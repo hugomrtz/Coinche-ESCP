@@ -1,0 +1,391 @@
+.game-table {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(135deg, #064e3b, #0f172a);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+}
+
+/* Top Bar */
+.top-bar {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.score-board {
+    pointer-events: auto;
+}
+
+.notifications {
+    pointer-events: auto;
+    font-size: 0.875rem;
+    max-width: 28rem;
+    text-align: center;
+}
+
+.notification-active {
+    color: #4ade80;
+    animation: pulse 2s infinite;
+    margin-top: 0.25rem;
+    font-weight: bold;
+}
+
+.notification-waiting {
+    color: #d1d5db;
+    margin-top: 0.25rem;
+    font-weight: bold;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}
+
+/* Players */
+.player-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-width: 2px;
+    border-style: solid;
+    color: white;
+    background-color: #374151;
+    border-color: #6b7280;
+}
+
+.player-active {
+    background-color: #14532d;
+    border-color: #4ade80;
+}
+
+.player-top {
+    position: absolute;
+    top: 6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.player-left {
+    position: absolute;
+    left: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.player-right {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.player-bottom {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 42rem;
+    z-index: 20;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Hands */
+.hand-container {
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    padding-top: 1rem;
+    overflow: visible;
+}
+
+.hand-human>*+* {
+    margin-left: -1.5rem;
+    /* -space-x-6 */
+}
+
+.hand-bot {
+    display: flex;
+    justify-content: center;
+}
+
+.hand-bot>*+* {
+    margin-left: -3rem;
+    /* -space-x-12 */
+}
+
+/* Card */
+.card-wrapper {
+    position: relative;
+    width: 4rem;
+    height: 6rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ccc;
+    transition: all 0.3s ease;
+}
+
+.card-playable {
+    cursor: pointer;
+}
+
+.card-playable:hover {
+    transform: translateY(-1rem);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+}
+
+.card-disabled {
+    opacity: 0.8;
+    filter: brightness(0.9);
+}
+
+.card-rank {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.card-suit {
+    font-size: 1.5rem;
+}
+
+.text-red {
+    color: #ef4444;
+}
+
+.text-black {
+    color: #0f172a;
+}
+
+.card-back {
+    width: 3rem;
+    height: 5rem;
+    background-color: #1e40af;
+    border-radius: 0.5rem;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Center Trick */
+.center-table {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24rem;
+    height: 24rem;
+    pointer-events: none;
+    z-index: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.trick-card {
+    position: absolute;
+    transition: all 0.5s ease;
+}
+
+.trick-label {
+    position: absolute;
+    top: -1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+}
+
+/* Bidding */
+.bidding-overlay {
+    position: absolute;
+    bottom: 10rem;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: auto;
+    z-index: 50;
+}
+
+.bidding-panel {
+    background-color: rgba(30, 41, 59, 0.95);
+    padding: 1rem;
+    border-radius: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    color: white;
+}
+
+.suit-row {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.suit-btn {
+    font-size: 1.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.suit-btn.selected {
+    background-color: #2563eb;
+    transform: scale(1.1);
+}
+
+.bid-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.bid-btn {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    background-color: #38bdf8;
+    color: #0f172a;
+}
+
+.bid-btn:disabled {
+    background-color: #4b5563;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.action-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.btn-pass {
+    background-color: #ef4444;
+    color: white;
+    width: 100%;
+}
+
+.btn-coinche {
+    background-color: #eab308;
+    color: black;
+    width: 100%;
+}
+
+.rotate-90 {
+    transform: rotate(90deg);
+}
+
+.rotate-minus-90 {
+    transform: rotate(-90deg);
+}
+
+.text-yellow {
+    color: #facc15;
+}
+/* Animations */
+@keyframes flyTo0 { to { transform: translate(0, 400px) scale(0.5); opacity: 0; } }
+@keyframes flyTo1 { to { transform: translate(400px, 0) scale(0.5); opacity: 0; } }
+@keyframes flyTo2 { to { transform: translate(0, -400px) scale(0.5); opacity: 0; } }
+@keyframes flyTo3 { to { transform: translate(-400px, 0) scale(0.5); opacity: 0; } }
+
+.fly-to-0 { animation: flyTo0 1s forwards ease-in; }
+.fly-to-1 { animation: flyTo1 1s forwards ease-in; }
+.fly-to-2 { animation: flyTo2 1s forwards ease-in; }
+.fly-to-3 { animation: flyTo3 1s forwards ease-in; }
+
+/* Card Entry Animation */
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.card-pop-in {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Speech Bubbles */
+.speech-bubble {
+  position: absolute;
+  background: white;
+  color: black;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-weight: bold;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  z-index: 50;
+  animation: popIn 0.3s ease-out;
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  border-width: 8px;
+  border-style: solid;
+}
+
+/* Positioning relative to players */
+.bubble-top { top: 3.5rem; left: 50%; transform: translateX(-50%); }
+.bubble-top::after { top: -16px; left: 50%; transform: translateX(-50%); border-color: transparent transparent white transparent; }
+
+.bubble-bottom { bottom: 8rem; left: 50%; transform: translateX(-50%); }
+.bubble-bottom::after { bottom: -16px; left: 50%; transform: translateX(-50%); border-color: white transparent transparent transparent; }
+
+.bubble-left { left: 5rem; top: 2rem; }
+.bubble-left::after { left: -16px; top: 50%; transform: translateY(-50%); border-color: transparent white transparent transparent; }
+
+.bubble-right { right: 5rem; top: 2rem; }
+.bubble-right::after { right: -16px; top: 50%; transform: translateY(-50%); border-color: transparent transparent transparent white; }
+
+.text-red { color: #ef4444; }
+.text-black { color: #0f172a; }
