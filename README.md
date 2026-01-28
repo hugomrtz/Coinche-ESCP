@@ -54,7 +54,7 @@ This system is designed to keep the project extensible without overclaiming curr
 
 ## Installation & Local Development
 
-### 1. Clone the repository
+1. Clone the repository
 
 ```bash
 git clone https://github.com/hugomrtz/Coinche-ESCP.git
