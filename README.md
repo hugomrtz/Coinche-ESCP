@@ -55,15 +55,14 @@ This system is designed to keep the project extensible without overclaiming curr
 ## Installation & Local Development
 
 1. Clone the repository
-
 ```bash
 git clone https://github.com/hugomrtz/Coinche-ESCP.git
 cd coinche-escp
 
-### 2. Install dependencies
+2. Install dependencies
 npm install
 
-### 3. Start the development server
+3. Start the development server
 npm run dev
 
 
