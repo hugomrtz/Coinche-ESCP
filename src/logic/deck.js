@@ -56,17 +56,25 @@ export const dealCards = (deck) => {
 };
 
 export const sortHand = (hand, trumpSuit = null) => {
-    // Sort by Suit then Rank.
-    // If trumpSuit is known, it might affect sorting, but standard sort is fine.
-    // Order: S, H, C, D (arbitrary) -> Ranks 7-A
-    const suitOrder = { 'S': 0, 'H': 1, 'C': 2, 'D': 3 };
-    const rankOrder = { '7': 0, '8': 1, '9': 2, '10': 3, 'J': 4, 'Q': 5, 'K': 6, 'A': 7 };
+    // Hierarchies from rules.js
+    const naOrder = ['7', '8', '9', 'J', 'Q', 'K', '10', 'A'];
+    const atOrder = ['7', '8', 'Q', 'K', '10', 'A', '9', 'J'];
+    const suitOrder = { 'H': 0, 'D': 1, 'C': 2, 'S': 3 }; // Arbitrary suit groups
 
     hand.sort((a, b) => {
-        if (suitOrder[a.suit] !== suitOrder[b.suit]) {
+        // First sort by suit
+        if (a.suit !== b.suit) {
+            // Put trump suit first if it exists
+            if (trumpSuit) {
+                if (a.suit === trumpSuit) return -1;
+                if (b.suit === trumpSuit) return 1;
+            }
             return suitOrder[a.suit] - suitOrder[b.suit];
         }
-        return rankOrder[a.rank] - rankOrder[b.rank];
+
+        // Then sort by rank hierarchy within the suit
+        const order = (trumpSuit && a.suit === trumpSuit) ? atOrder : naOrder;
+        return order.indexOf(a.rank) - order.indexOf(b.rank);
     });
     return hand;
 };

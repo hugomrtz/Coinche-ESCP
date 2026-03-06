@@ -1,48 +1,76 @@
-import { getValidMoves, getCardPoints, RANK_STRENGTH } from './rules';
+import { getValidMoves, getCardPoints, RANK_STRENGTH, getTrickWinner } from './rules';
 
-export const getBotBid = (hand, currentBid, partnerBid, myIndex) => {
+export const getBotBid = (hand, currentBid, partnerBid, myIndex, botMemory = { aggression: 1.0, support: 1.0 }) => {
     const suits = ['H', 'D', 'C', 'S'];
+    const aggression = botMemory.aggression || 1.0;
+    const supportCoeff = botMemory.support || 1.0;
 
-    // 1. Evaluate hand for each suit to find MY best suit
+    // 1. Strategic Evaluation for each suit
     let myBestSuit = null;
-    let myMaxPoints = 0;
+    let myMaxPower = 0;
 
     suits.forEach(suit => {
-        let points = 0;
-        let jacks = 0;
-        let nines = 0;
-        let aces = 0;
-        let hasK = false;
-        let hasQ = false;
+        let power = 0;
+        const myTrumps = hand.filter(c => c.suit === suit);
+        const trumpCount = myTrumps.length;
 
-        hand.forEach(c => {
-            if (c.suit === suit) {
-                if (c.rank === 'J') { points += 20; jacks++; }
-                else if (c.rank === '9') { points += 14; nines++; }
-                else if (c.rank === 'A') { points += 11; aces++; }
-                else if (c.rank === '10') { points += 10; }
-                else if (c.rank === 'K') { points += 4; hasK = true; }
-                else if (c.rank === 'Q') { points += 3; hasQ = true; }
-                else { points += 2; }
-            } else {
-                if (c.rank === 'A') points += 11;
-                else if (c.rank === '10') points += 5;
+        // Trump Strength
+        const hasJack = myTrumps.some(c => c.rank === 'J');
+        const hasNine = myTrumps.some(c => c.rank === '9');
+        const hasAce = myTrumps.some(c => c.rank === 'A');
+        const hasTen = myTrumps.some(c => c.rank === '10');
+
+        if (hasJack) power += 45;
+        if (hasNine) power += 35;
+        if (hasAce) power += 15;
+        if (hasTen) power += 10;
+
+        // Trump Length Bonus
+        if (trumpCount >= 5) power += 40;
+        else if (trumpCount >= 4) power += 20;
+        else if (trumpCount === 3) power += 5;
+
+        // Side Suit Control (Aces)
+        suits.forEach(s => {
+            if (s !== suit) {
+                const hasSideAce = hand.some(c => c.suit === s && c.rank === 'A');
+                const hasSideTen = hand.some(c => c.suit === s && c.rank === '10');
+                if (hasSideAce) power += 25;
+                if (hasSideTen) power += 10;
             }
         });
 
-        // Synergy bonuses
-        if (jacks > 0 && nines > 0) points += 20;
-        if (jacks > 0 && aces > 0) points += 10;
-        if (hasK && hasQ) points += 20; // Belote signal bonus (direct +20 points)
+        // Cutting Potential (Chicane/Singleton)
+        suits.forEach(s => {
+            if (s !== suit) {
+                const count = hand.filter(c => c.suit === s).length;
+                if (count === 0) power += 35; // Chicane: Very powerful and strategic
+                else if (count === 1) power += 15; // Singleton
+            }
+        });
 
-        if (points > myMaxPoints) {
-            myMaxPoints = points;
+        // Belote Bonus
+        if (hand.some(c => c.suit === suit && c.rank === 'K') && hand.some(c => c.suit === suit && c.rank === 'Q')) {
+            power += 20;
+        }
+
+        // CONTROL PENALTY: Critical check for Jack and Nine
+        if (!hasJack && !hasNine) {
+            power -= 60; // Increased penalty: missing both is a major weakness
+        } else if (!hasJack) {
+            power -= 30; // Increased penalty: missing the Valet makes your 9 vulnerable
+        }
+
+        // Random Factor for more stable behavior (-5 to +5)
+        power += (Math.floor(Math.random() * 11) - 5);
+
+        if (power > myMaxPower) {
+            myMaxPower = power;
             myBestSuit = suit;
         }
     });
 
     // 2. Logic: Support Partner?
-    // Determine if current bid is owned by partner
     let isPartnerBid = false;
     if (currentBid && Math.abs(currentBid.player - myIndex) === 2) {
         isPartnerBid = true;
@@ -50,88 +78,154 @@ export const getBotBid = (hand, currentBid, partnerBid, myIndex) => {
 
     if (isPartnerBid) {
         const trump = currentBid.suit;
-        // Re-evaluate hand specifically for PARTNER'S trump
-        let supportPoints = 0;
-        let hasJack = false;
-        let hasNine = false;
-        let hasAce = false;
+        let supportPower = 0;
+        const myTrumps = hand.filter(c => c.suit === trump);
 
-        hand.forEach(c => {
-            if (c.suit === trump) {
-                if (c.rank === 'J') { supportPoints += 30; hasJack = true; } // Jack is HUGE support
-                else if (c.rank === '9') { supportPoints += 20; hasNine = true; }
-                else if (c.rank === 'A') { supportPoints += 15; hasAce = true; }
-                else { supportPoints += 5; } // Quantity of trumps matters
-            } else {
-                if (c.rank === 'A') supportPoints += 12; // Side aces help
-            }
+        if (myTrumps.some(c => c.rank === 'J')) supportPower += 40;
+        if (myTrumps.some(c => c.rank === '9')) supportPower += 30;
+        if (myTrumps.length >= 3) supportPower += 15;
+
+        suits.forEach(s => {
+            if (s !== trump && hand.some(c => c.suit === s && c.rank === 'A')) supportPower += 20;
         });
 
-        // Decision to raise partner
-        // If I have the Jack, I almost MUST raise if he isn't already infinite
-        if (hasJack && currentBid.amount < 160) {
-            return { type: 'BID', amount: currentBid.amount + 10, suit: trump };
-        }
-        // If I have 9 + Ace, or 9 + quantity
-        if (hasNine && supportPoints > 40 && currentBid.amount < 150) {
-            return { type: 'BID', amount: currentBid.amount + 10, suit: trump };
-        }
-        // General support strength
-        if (supportPoints > 50 && currentBid.amount < 140) {
-            return { type: 'BID', amount: currentBid.amount + 10, suit: trump };
+        supportPower *= supportCoeff;
+
+        const raise = Math.floor(supportPower / 25) * 10;
+        if (raise >= 10 && currentBid.amount + raise <= 160) {
+            return { type: 'BID', amount: currentBid.amount + raise, suit: trump };
         }
 
-        // Don't bid my own suit if partner is already confident, unless my suit is INSANE
-        if (myMaxPoints < 90) return { type: 'PASS' };
+        // If I have my own best suit that is much stronger, I might switch (rare in Coinche but happens)
+        if (myMaxPower > 100 && myMaxPower > supportPower + 40 && currentBid.amount < 110) {
+            return { type: 'BID', amount: currentBid.amount + 10, suit: myBestSuit };
+        }
+
+        return { type: 'PASS' };
     }
 
     // 3. Logic: Fresh Bid or Overbid Opponent
-    // Calculate raw bid value strength
     let bidAmount = 0;
-    if (myMaxPoints > 100) bidAmount = 140;
-    else if (myMaxPoints > 85) bidAmount = 120;
-    else if (myMaxPoints > 65) bidAmount = 100;
-    else if (myMaxPoints > 50) bidAmount = 82;
+    const thr = (base) => base / Math.max(0.6, aggression); // Threshold adjustment
+
+    // Get Master status of the best suit
+    const myTrumps = hand.filter(c => c.suit === myBestSuit);
+    const hasJack = myTrumps.some(c => c.rank === 'J');
+    const hasNine = myTrumps.some(c => c.rank === '9');
+    const hasAce = myTrumps.some(c => c.rank === 'A');
+
+    // STRICT TIER CONSTRAINTS (Coinche ESCP Logic)
+    if (myMaxPower > thr(155) && hasJack && hasNine && hasAce) bidAmount = 160;
+    else if (myMaxPower > thr(140) && hasJack && (hasNine || hasAce)) bidAmount = 140;
+    else if (myMaxPower > thr(110) && (hasJack || hasNine)) bidAmount = 120;
+    else if (myMaxPower > thr(80) && (hasJack || hasNine || myTrumps.length >= 5)) bidAmount = 100;
+    else if (myMaxPower > thr(50)) bidAmount = 80;
 
     if (bidAmount === 0) return { type: 'PASS' };
 
-    // If no bid on table, open.
     if (!currentBid) {
         return { type: 'BID', amount: bidAmount, suit: myBestSuit };
     }
 
-    // If opponent bid
-    if (!isPartnerBid && currentBid) {
-        // Can I overbid?
+    // Overbid opponent
+    if (!isPartnerBid && currentBid && !currentBid.coinched) {
         if (bidAmount > currentBid.amount) {
             return { type: 'BID', amount: bidAmount, suit: myBestSuit };
         }
-        // Even if tied in value, if I have the Jack, I might risk 10 more
-        // (Simple version: PASS if not strictly better)
-        return { type: 'PASS' };
+
+        // Strategic Overbid
+        const myTrumps = hand.filter(c => c.suit === myBestSuit);
+        const hasKey = myTrumps.some(c => c.rank === 'J' || c.rank === '9');
+        if (hasKey && myTrumps.length >= 4 && currentBid.amount < 130) {
+            return { type: 'BID', amount: currentBid.amount + 10, suit: myBestSuit };
+        }
+    }
+
+    // 4. Coinche/Surcoinche Logic
+    if (currentBid && !currentBid.surcoinched) {
+        const isOpponentBid = Math.abs(currentBid.player - myIndex) % 2 === 1;
+
+        if (isOpponentBid && !currentBid.coinched) {
+            const myTrumps = hand.filter(c => c.suit === currentBid.suit);
+            const hasJack = myTrumps.some(c => c.rank === 'J');
+            const hasNine = myTrumps.some(c => c.rank === '9');
+            const sideAces = hand.filter(c => c.suit !== currentBid.suit && c.rank === 'A').length;
+
+            if (currentBid.amount >= 110 && ((hasJack && hasNine) || (hasJack && myTrumps.length >= 4 && sideAces >= 1))) {
+                return { type: 'COINCHE' };
+            }
+        }
+
+        if (!isOpponentBid && currentBid.coinched) {
+            const myTrumps = hand.filter(c => c.suit === currentBid.suit);
+            const hasJack = myTrumps.some(c => c.rank === 'J');
+            const hasNine = myTrumps.some(c => c.rank === '9');
+            if (hasJack && hasNine && myTrumps.length >= 5) {
+                return { type: 'SURCOINCHE' };
+            }
+        }
     }
 
     return { type: 'PASS' };
 };
 
 export const getBotPlay = (hand, trick, trumpSuit, myIndex, history) => {
-    // trick: {card, playerIndex}[]
     const validMoves = getValidMoves(hand, trick, trumpSuit, myIndex);
+    if (!validMoves || validMoves.length === 0) return null;
 
-    // 1. Random valid move (Baseline)
-    // 2. Simple improvement:
-    //    - If I am last and winning, play lowest safe winner?
-    //    - If I am winning, try to win cheap.
-    //    - If I am losing, dump trash.
+    // 1. LEADING (Trick is empty)
+    if (trick.length === 0) {
+        // Priority A: Lead with a non-trump Ace (Safe trick)
+        const sideAces = validMoves.filter(c => c.rank === 'A' && c.suit !== trumpSuit);
+        if (sideAces.length > 0) return sideAces[0];
 
-    // Just return random valid for MVP to avoid specific bug logic.
-    // But sorted by rank ascending (worst card) usually good for discarding.
-    // Sorted by rank descending (best card) good for winning.
+        // Priority B: If holding the Master Trump (Jack), consider drawing trumps
+        const jackTrump = validMoves.find(c => c.rank === 'J' && c.suit === trumpSuit);
+        if (jackTrump && hand.filter(c => c.suit === trumpSuit).length >= 3) {
+            return jackTrump;
+        }
 
-    // Heuristic:
-    // If partner winning -> play lowest point card? Or 10/Ace if safe?
-    // Let's do random for now, much safer implementation wise.
+        // Priority C: Lead with a King of a side suit
+        const sideKings = validMoves.filter(c => c.rank === 'K' && c.suit !== trumpSuit);
+        if (sideKings.length > 0) return sideKings[0];
 
-    const randomIndex = Math.floor(Math.random() * validMoves.length);
-    return validMoves[randomIndex];
+        // Default: Smallest card of a long suit or random
+        return validMoves[Math.floor(Math.random() * validMoves.length)];
+    }
+
+    // 2. FOLLOWING
+    const winnerIndex = getTrickWinner(trick, trumpSuit);
+    const partnerIndex = (myIndex + 2) % 4;
+    const isPartnerWinning = (winnerIndex === partnerIndex);
+
+    const sortAsc = (a, b) => getCardPoints(a, trumpSuit) - getCardPoints(b, trumpSuit);
+    const sortDesc = (a, b) => getCardPoints(b, trumpSuit) - getCardPoints(a, trumpSuit);
+
+    if (isPartnerWinning) {
+        // Partner is winning the trick!
+        if (trick.length === 3) {
+            // Last player: Load the trick with points if partner is guaranteed winner
+            const pointCards = [...validMoves].sort(sortDesc);
+            return pointCards[0];
+        }
+        // Not last: discard trash to keep strengths
+        const trashCards = [...validMoves].sort(sortAsc);
+        return trashCards[0];
+    } else {
+        // Opponent is winning, try to take it back
+        const winningMoves = validMoves.filter(c => {
+            const tempTrick = [...trick, { card: c, playerIndex: myIndex }];
+            return getTrickWinner(tempTrick, trumpSuit) === myIndex;
+        });
+
+        if (winningMoves.length > 0) {
+            // Take the trick with the CHEAPEST possible winner
+            const calculatedWinners = winningMoves.sort(sortAsc);
+            return calculatedWinners[0];
+        }
+
+        // Cannot win trick, discard trash
+        const trashCards = [...validMoves].sort(sortAsc);
+        return trashCards[0];
+    }
 };
